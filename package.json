@@ -1,0 +1,26 @@
+{
+  "name": "pits",
+  "version": "1.0.0",
+  "description": "Package Installer for Typescript",
+  "main": "index.js",
+  "bin": {
+    "pits": "index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "package",
+    "installer",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^7.0.8",
+    "typescript": "^2.2.1"
+  },
+  "dependencies": {
+    "cross-spawn": "^5.1.0"
+  }
+}

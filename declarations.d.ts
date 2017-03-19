@@ -1,0 +1,2 @@
+declare module 'cross-spawn';
+

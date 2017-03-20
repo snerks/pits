@@ -4,6 +4,10 @@
         "target": "es5",
         "noImplicitAny": false,
         "sourceMap": false,
-        "strictNullChecks": true
+        "strictNullChecks": true,
+        // "moduleResolution": "node",
+        "listFiles": false,
+        "traceResolution": false,
+        "pretty": true
     }
 }

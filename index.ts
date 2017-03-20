@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import spawn = require('cross-spawn');
-import * as process from 'process';
+// import * as process from 'process';
 
 // var command;
 // var args;
@@ -18,93 +18,132 @@ import * as process from 'process';
 // }
 // args.push('react', 'react-dom', '@types/node', '@types/react', '@types/react-dom', '@types/jest');
 
-const packageNames: string[] = [
+const requiredPackageNames: string[] = [
     'redux',
     'react-redux'
 ];
 
-const getYarnCommand: () => string = () => {
-    return 'yarnpkg';
-};
-
-const getYarnAddCommandLineArgs: () => string[] = () => {
-    const commandParts: string[] = [
-        'add',
-        ...packageNames
-    ];
-
-    return commandParts;
-};
-
-const getYarnAddTypesCommandLineArgs: () => string[] = () => {
-    const packageNameTypes: string[] = packageNames.map((packageName: string) => {
+const getTypesPackageNames: (packageNames: string[]) => string[] = (packageNames: string[]) => {
+    return packageNames.map((packageName: string) => {
         return `@types/${packageName}`;
     });
-
-    const commandParts: string[] = [
-        'add',
-        ...packageNameTypes,
-        '-D'
-    ];
-
-    return commandParts;
 };
 
-const getYarnAddCommandLine: () => string = () => {
-    const commandParts: string[] = [
-        getYarnCommand(),
-        ...getYarnAddCommandLineArgs()
-    ];
+interface PackageManagerCommandProvider {
+    readonly packageManagerAppName: string;
 
-    const command: string = commandParts.join(' ');
+    readonly installPackageArgs: string[];
+    readonly installPackageTypesArgs: string[];
 
-    return `Command : ${command}`;
+    readonly installPackageCommandLine: string;
+    readonly installPackageTypesCommandLine: string;
+}
+
+class YarnCommandProvider implements PackageManagerCommandProvider {
+
+    readonly packageManagerAppName = 'yarnpkg';
+    readonly installArgName = 'add';
+    readonly saveDevSwitchName = '-D';
+
+    get installPackageArgs(): string[] {
+        const commandArgs: string[] = [
+            this.installArgName,
+            ...requiredPackageNames
+        ];
+
+        return commandArgs;
+    };
+
+    get installPackageTypesArgs(): string[] {
+        const typesPackageNames: string[] = getTypesPackageNames(requiredPackageNames);
+
+        const commandArgs: string[] = [
+            this.installArgName,
+            ...typesPackageNames,
+            this.saveDevSwitchName
+        ];
+
+        return commandArgs;
+    };
+
+    get installPackageCommandLine(): string {
+        const commandParts: string[] = [
+            this.packageManagerAppName,
+            ...this.installPackageArgs
+        ];
+
+        return commandParts.join(' ');
+    }
+
+    get installPackageTypesCommandLine(): string {
+        const commandParts: string[] = [
+            this.packageManagerAppName,
+            ...this.installPackageTypesArgs
+        ];
+
+        return commandParts.join(' ');
+    }
+}
+
+const requiredCommandProvider: PackageManagerCommandProvider = new YarnCommandProvider();
+
+// type InstallGroupFunction = (
+//     installMessage: string,
+//     installCommandLine: string,
+//     packageManagerAppName: string,
+//     installPackageCommandArgs: string[]) => void;
+
+const installGroup = (
+    installMessage: string,
+    installCommandLine: string,
+    packageManagerAppName: string,
+    installPackageCommandArgs: string[]) => {
+
+    console.log(`${installMessage} ${installCommandLine} ...`);
+    console.log();
+
+    // tslint:disable-next-line:no-any
+    var installProcess: any = spawn(
+        packageManagerAppName,
+        installPackageCommandArgs,
+        { stdio: 'inherit' }
+    );
+
+    installProcess.on('close', (code: number): void => {
+        if (code !== 0) {
+            console.error(
+                '`' + installCommandLine + '` failed'
+            );
+            return;
+        }
+    });
 };
 
-const getYarnAddTypesCommandLine: () => string = () => {
-    const commandParts: string[] = [
-        getYarnCommand(),
-        ...getYarnAddTypesCommandLineArgs()
-    ];
+// type InstallFunction = (commandProvider: PackageManagerCommandProvider) => void;
 
-    const command: string = commandParts.join(' ');
-
-    return `Command : ${command}`;
+const installPackages = (commandProvider: PackageManagerCommandProvider) => {
+    installGroup(
+        'Installing NPM Packages using',
+        commandProvider.installPackageCommandLine,
+        commandProvider.packageManagerAppName,
+        commandProvider.installPackageArgs
+    );
 };
 
-const printMessage: () => void = () => {
+const installPackageTypes = (commandProvider: PackageManagerCommandProvider) => {
+    installGroup(
+        'Installing NPM Types Packages using',
+        commandProvider.installPackageTypesCommandLine,
+        commandProvider.packageManagerAppName,
+        commandProvider.installPackageTypesArgs
+    );
+};
+
+const printMessage = () => {
     console.log('Hello from PITS!');
-    console.log(`Packages : ${getYarnAddCommandLine()}`);
-    console.log(`Types : ${getYarnAddTypesCommandLine()}`);
-    console.log(`CWD : ${process.cwd()}`);
 };
 
 printMessage();
 
-const packageInstallCommand: string = getYarnAddCommandLine();
-
-console.log('Installing NPM Packages using ' + packageInstallCommand + '...');
-console.log();
-
-var addProc: any = spawn(getYarnCommand(), getYarnAddCommandLineArgs(), { stdio: 'inherit' });
-
-addProc.on('close', function (code: number): void {
-    if (code !== 0) {
-        console.error('`' + getYarnCommand() + ' ' + getYarnAddCommandLineArgs().join(' ') + '` failed');
-        return;
-    }
-});
-
-const packageInstallTypesCommand: string = getYarnAddTypesCommandLine();
-
-console.log('Installing NPM Types Packages using ' + packageInstallTypesCommand + '...');
-console.log();
-
-var addTypesProc: any = spawn(getYarnCommand(), getYarnAddTypesCommandLineArgs(), { stdio: 'inherit' });
-
-addTypesProc.on('close', function (code: number): void {
-    if (code !== 0) {
-        console.error('`' + getYarnCommand() + ' ' + getYarnAddTypesCommandLineArgs().join(' ') + '` failed');
-        return;
-    }
-});
+installPackages(requiredCommandProvider);
+installPackageTypes(requiredCommandProvider);

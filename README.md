@@ -13,4 +13,4 @@ Attempts to install both the requested `npm` package and the associated `@types`
     -l, --list [packages]     List of package items (default: empty list)
     -b, --bundle [shortname]  A specific bundle of packages (no default)
 
-### Uses `yarn`, by default, falling back to `npm`.
+*Uses `yarn`, by default, falling back to `npm`.*

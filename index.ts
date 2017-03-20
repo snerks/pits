@@ -1,97 +1,53 @@
 #!/usr/bin/env node
+import * as process from 'process';
+import * as commander from 'commander';
+import * as fs from 'fs';
+import * as chalk from 'chalk';
 import spawn = require('cross-spawn');
-// import * as process from 'process';
 
-// var command;
-// var args;
+import { PackageManagerCommandProvider, getTypesPackageNames } from './PackageManagerCommandProvider';
+import YarnCommandProvider from './YarnCommandProvider';
+import NpmCommandProvider from './NpmCommandProvider';
+import { getBundlePackageNames } from './BundleResolver';
 
-// if (useYarn) {
-//     command = 'yarnpkg';
-//     args = ['add'];
-// } else {
-//     command = 'npm';
-//     args = [
-//         'install',
-//         '--save',
-//         verbose && '--verbose'
-//     ].filter(function (e) { return e; });
-// }
-// args.push('react', 'react-dom', '@types/node', '@types/react', '@types/react-dom', '@types/jest');
+console.log(chalk.cyan('Hello from Package Installer for TypeScript!'));
 
-const requiredPackageNames: string[] = [
-    'redux',
-    'react-redux'
-];
+const isNodeProject = fs.existsSync('package.json');
+const useYarn = fs.existsSync('yarn.lock');
 
-const getTypesPackageNames: (packageNames: string[]) => string[] = (packageNames: string[]) => {
-    return packageNames.map((packageName: string) => {
-        return `@types/${packageName}`;
-    });
-};
-
-interface PackageManagerCommandProvider {
-    readonly packageManagerAppName: string;
-
-    readonly installPackageArgs: string[];
-    readonly installPackageTypesArgs: string[];
-
-    readonly installPackageCommandLine: string;
-    readonly installPackageTypesCommandLine: string;
+function list(itemsText: string) {
+    return itemsText.split(' ').map(String);
 }
 
-class YarnCommandProvider implements PackageManagerCommandProvider {
+// Workaround issue where "index" is displayed as command name
+process.argv[1] = 'pits';
 
-    readonly packageManagerAppName = 'yarnpkg';
-    readonly installArgName = 'add';
-    readonly saveDevSwitchName = '-D';
+commander
+    .version('1.0.0')
+    .usage('[options] <package ...>')
+    .option('-l, --list [packages]', 'List of package items (default: empty list)', list, [])
+    .option('-b, --bundle [shortname]', 'A specific bundle of packages (no default)')
+    .parse(process.argv);
 
-    get installPackageArgs(): string[] {
-        const commandArgs: string[] = [
-            this.installArgName,
-            ...requiredPackageNames
-        ];
+console.log('You requested:');
+console.log('\tPackages - %j', commander.list);
+console.log('\tBundle - %s', commander.bundle);
 
-        return commandArgs;
-    };
+let requiredPackageNames: string[] = [];
 
-    get installPackageTypesArgs(): string[] {
-        const typesPackageNames: string[] = getTypesPackageNames(requiredPackageNames);
-
-        const commandArgs: string[] = [
-            this.installArgName,
-            ...typesPackageNames,
-            this.saveDevSwitchName
-        ];
-
-        return commandArgs;
-    };
-
-    get installPackageCommandLine(): string {
-        const commandParts: string[] = [
-            this.packageManagerAppName,
-            ...this.installPackageArgs
-        ];
-
-        return commandParts.join(' ');
-    }
-
-    get installPackageTypesCommandLine(): string {
-        const commandParts: string[] = [
-            this.packageManagerAppName,
-            ...this.installPackageTypesArgs
-        ];
-
-        return commandParts.join(' ');
+if (commander.bundle) {
+    requiredPackageNames = getBundlePackageNames(commander.bundle as string);
+} else {
+    if (commander.list && commander.list.length) {
+        requiredPackageNames = commander.list as string[];
     }
 }
 
-const requiredCommandProvider: PackageManagerCommandProvider = new YarnCommandProvider();
+const haveUserSuppliedArgs = requiredPackageNames.length > 0;
 
-// type InstallGroupFunction = (
-//     installMessage: string,
-//     installCommandLine: string,
-//     packageManagerAppName: string,
-//     installPackageCommandArgs: string[]) => void;
+const requiredCommandProvider: PackageManagerCommandProvider = (
+    useYarn ? new YarnCommandProvider(requiredPackageNames) : new NpmCommandProvider(requiredPackageNames)
+);
 
 const installGroup = (
     installMessage: string,
@@ -103,7 +59,7 @@ const installGroup = (
     console.log();
 
     // tslint:disable-next-line:no-any
-    var installProcess: any = spawn(
+    const installProcess: any = spawn(
         packageManagerAppName,
         installPackageCommandArgs,
         { stdio: 'inherit' }
@@ -112,14 +68,12 @@ const installGroup = (
     installProcess.on('close', (code: number): void => {
         if (code !== 0) {
             console.error(
-                '`' + installCommandLine + '` failed'
+                '`' + installCommandLine + '` failed' + ' : error Code = ' + code.toString()
             );
             return;
         }
     });
 };
-
-// type InstallFunction = (commandProvider: PackageManagerCommandProvider) => void;
 
 const installPackages = (commandProvider: PackageManagerCommandProvider) => {
     installGroup(
@@ -139,11 +93,30 @@ const installPackageTypes = (commandProvider: PackageManagerCommandProvider) => 
     );
 };
 
-const printMessage = () => {
-    console.log('Hello from PITS!');
-};
+const haveResolvedPackageNames = (requiredPackageNames && requiredPackageNames.length > 0);
+const isRequestSuppressed = !haveResolvedPackageNames || !isNodeProject;
 
-printMessage();
+if (isRequestSuppressed) {
+    if (!isNodeProject) {
+        console.log(chalk.red(`This folder does not contain a project.json file.`));
+    } else {
+        console.log(chalk.red(`Your request resolved to NO ITEMS!`));
+    }
+}
 
-installPackages(requiredCommandProvider);
-installPackageTypes(requiredCommandProvider);
+console.log(chalk.cyan(`Your request resolved to the following items:`));
+
+if (haveResolvedPackageNames) {
+    for (let requiredPackageName of requiredPackageNames) {
+        console.log(chalk.green(`\t${requiredPackageName}`));
+    }
+} else {
+    console.log(chalk.red(`Your request resolved to NO ITEMS!`));
+}
+
+if (isRequestSuppressed) {
+    console.log(chalk.red(`No package will be requested.`));
+} else {
+    installPackages(requiredCommandProvider);
+    installPackageTypes(requiredCommandProvider);
+}

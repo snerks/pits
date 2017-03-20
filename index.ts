@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as chalk from 'chalk';
 import spawn = require('cross-spawn');
 
-import { PackageManagerCommandProvider, getTypesPackageNames } from './PackageManagerCommandProvider';
+import { PackageManagerCommandProvider } from './PackageManagerCommandProvider';
 import YarnCommandProvider from './YarnCommandProvider';
 import NpmCommandProvider from './NpmCommandProvider';
 import { getBundlePackageNames } from './BundleResolver';

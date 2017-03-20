@@ -14,7 +14,10 @@
     "installer",
     "typescript"
   ],
-  "author": "",
+  "author": { 
+    "name" : "snerks",
+    "url" : "https://github.com/snerks/pits"
+  },
   "license": "ISC",
   "devDependencies": {
     "@types/chalk": "^0.4.31",

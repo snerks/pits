@@ -2,6 +2,8 @@
 
 Simple CLI for TypeScript projects.
 
+[Companion to https://github.com/wmonk/create-react-app-typescript](https://github.com/wmonk/create-react-app-typescript)
+
 Attempts to install both the requested `npm` package and the associated `@types` package `d.ts`.
 
   Usage: pits [options] <package ...>
